@@ -22,7 +22,13 @@ const sampleJSON = {
 }
 
 export default function App() {
-    const [resumeJSON, setResumeJSON] = useState(JSON.stringify(sampleJSON, null, 2))
+    // localStorage key
+    const SAVED_KEY = "resume_json";
+
+    // initialize resumeJSON from localStorage if present
+    const saved = typeof window !== "undefined" ? localStorage.getItem(SAVED_KEY) : null;
+    const [resumeJSON, setResumeJSON] = useState(saved || JSON.stringify(sampleJSON, null, 2))
+
     const [template, setTemplate] = useState('classic')
     const [darkMode, setDarkMode] = useState(false)
     const [photo, setPhoto] = useState(null)
@@ -32,7 +38,19 @@ export default function App() {
         document.body.className = darkMode ? 'dark' : 'light'
     }, [darkMode])
 
+    // persist resumeJSON to localStorage whenever it changes
+    useEffect(() => {
+        try {
+            if (typeof window !== "undefined") {
+                localStorage.setItem(SAVED_KEY, resumeJSON)
+            }
+        } catch (e) {
+            // ignore storage errors (private mode etc.)
+        }
+    }, [resumeJSON])
+
     const handleExportPDF = () => {
+        if (!previewRef.current) return
         html2canvas(previewRef.current).then(canvas => {
             const imgData = canvas.toDataURL('image/png')
             const pdf = new jsPDF('p', 'mm', 'a4')
@@ -82,7 +100,25 @@ export default function App() {
                 </label>
                 <br /><br />
                 <label>Upload Photo: </label>
-                <input type="file" accept="image/*" onChange={e => setPhoto(URL.createObjectURL(e.target.files[0]))} />
+                <input type="file" accept="image/*" onChange={e => {
+                    const file = e.target.files && e.target.files[0]
+                    if (file) {
+                        // createObjectURL is fine for preview; if you want persistence embed as data URL:
+                        const url = URL.createObjectURL(file)
+                        setPhoto(url)
+
+                        // optionally embed as base64 into JSON so exported PDF always has it (uncomment if desired)
+                        // const reader = new FileReader()
+                        // reader.onload = () => {
+                        //   try {
+                        //     const parsed = JSON.parse(resumeJSON)
+                        //     parsed.profilePic = reader.result
+                        //     setResumeJSON(JSON.stringify(parsed, null, 2))
+                        //   } catch {}
+                        // }
+                        // reader.readAsDataURL(file)
+                    }
+                }} />
             </div>
 
             <div className="preview" ref={previewRef}>
