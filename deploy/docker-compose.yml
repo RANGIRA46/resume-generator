@@ -1,0 +1,29 @@
+﻿services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web/Dockerfile
+    image: resume_web:local
+    container_name: resume_web
+    networks:
+      - appnet
+
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    image: resume_proxy:local
+    container_name: resume_proxy
+    ports:
+      - "8081:80"    # HTTP on host:8081 -> container:80
+      - "8443:443"   # HTTPS on host:8443 -> container:443 (self-signed for local dev)
+    volumes:
+      - ./proxy/certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
